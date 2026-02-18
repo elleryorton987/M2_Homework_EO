@@ -10,10 +10,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-COL_START = "L"
-COL_END = "S"
-HEADER_ROW = 1  # zero-based index; Excel row 2
-DATA_START_ROW = 3  # zero-based index; Excel row 4
+RANK_COL_START_IDX = 11  # Excel column L (0-based)
+RANK_COL_END_IDX = 18  # Excel column S (0-based, inclusive)
+LABEL_ROW_IDX = 1  # Excel row 2 (0-based)
+DATA_START_ROW_IDX = 3  # Excel row 4 (0-based)
 
 
 REFLECTION_TEMPLATE = """- What changed from Project 1 to this workflow?
@@ -36,24 +36,30 @@ def load_rank_data(input_path: Path) -> pd.DataFrame:
     if not input_path.exists():
         raise FileNotFoundError(f"Input file does not exist: {input_path}")
 
-    df = pd.read_excel(
-        input_path,
-        engine="openpyxl",
-        header=HEADER_ROW,
-        usecols=f"{COL_START}:{COL_END}",
-    )
+    df = pd.read_excel(input_path, engine="openpyxl", header=None)
 
-    # Student responses start on Excel row 4, which is zero-based row index 3.
-    df = df.iloc[(DATA_START_ROW - HEADER_ROW - 1) :].copy()
+    rank_cols = slice(RANK_COL_START_IDX, RANK_COL_END_IDX + 1)
 
-    # Keep the row-2 labels exactly as course_name values.
-    df.columns = [str(col).strip() for col in df.columns]
+    # Labels are in Excel row 2 (index 1) for rank-order columns L:S.
+    raw_labels = df.iloc[LABEL_ROW_IDX, rank_cols]
 
-    # Convert all values to numeric ranks (coerce invalid to NaN)
-    for col in df.columns:
-        df[col] = pd.to_numeric(df[col], errors="coerce")
+    course_names = []
+    for label in raw_labels:
+        label_text = str(label).strip()
+        if " - " in label_text:
+            course_name = label_text.split(" - ")[-1].strip()
+        else:
+            course_name = label_text
+        course_names.append(course_name)
 
-    return df
+    # Student responses start on Excel row 4 (index 3).
+    rank_df = df.iloc[DATA_START_ROW_IDX:, rank_cols].copy()
+    rank_df.columns = course_names
+
+    # Convert all values to numeric ranks (coerce invalid to NaN).
+    rank_df = rank_df.apply(pd.to_numeric, errors="coerce")
+
+    return rank_df
 
 
 def summarize_rankings(rank_df: pd.DataFrame) -> pd.DataFrame:
