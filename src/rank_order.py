@@ -52,7 +52,7 @@ def excel_col_to_index(col_letters: str) -> int:
     return idx - 1
 
 
-def load_rank_data(input_path: Path) -> pd.DataFrame:
+def load_rank_data(input_path: Path) -> tuple[pd.DataFrame, int, int]:
     if not input_path.exists():
         raise FileNotFoundError(f"Input file does not exist: {input_path}")
 
@@ -69,7 +69,11 @@ def load_rank_data(input_path: Path) -> pd.DataFrame:
     # Convert all values to numeric ranks (coerce invalid to NaN).
     rank_df = rank_df.apply(pd.to_numeric, errors="coerce")
 
-    return rank_df
+    total_rows_after_row4 = len(rank_df)
+    rank_df = rank_df.dropna(how="all")
+    rows_dropped_all_blank = total_rows_after_row4 - len(rank_df)
+
+    return rank_df, total_rows_after_row4, rows_dropped_all_blank
 
 
 def summarize_rankings(rank_df: pd.DataFrame) -> pd.DataFrame:
@@ -98,7 +102,7 @@ def save_chart(summary: pd.DataFrame, outpath: Path) -> None:
     ax.set_ylabel("Course Name")
     ax.set_title(
         "2024 MAcc Exit Survey: CORE Course Benefit Ranking\n"
-        "Mean rank (1 = most beneficial). Lower is better."
+        "Mean rank computed using available (non-missing) responses; n varies by course."
     )
     ax.grid(axis="x", linestyle="--", alpha=0.4)
     fig.tight_layout()
@@ -112,9 +116,10 @@ def main() -> None:
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
-    rank_df = load_rank_data(input_path)
+    rank_df, total_rows_after_row4, rows_dropped_all_blank = load_rank_data(input_path)
 
-    print(f"Audit: rows read (student response rows) = {len(rank_df)}")
+    print(f"Audit: total rows after row 4 = {total_rows_after_row4}")
+    print(f"Audit: rows dropped as all-blank = {rows_dropped_all_blank}")
     for course in rank_df.columns:
         print(f"Audit: {course} n = {int(rank_df[course].notna().sum())}")
 
