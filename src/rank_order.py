@@ -23,9 +23,7 @@ def load_rank_data(input_path: Path) -> pd.DataFrame:
     if not input_path.exists():
         raise FileNotFoundError(f"Input file does not exist: {input_path}")
 
-    rank_df = pd.read_excel(input_path, engine="openpyxl", header=0)
-    rank_df = rank_df.apply(pd.to_numeric, errors="coerce")
-    return rank_df
+    return pd.read_excel(input_path, header=0)
 
 
 def summarize_rankings(rank_df: pd.DataFrame) -> pd.DataFrame:
