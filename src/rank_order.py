@@ -4,16 +4,25 @@
 from __future__ import annotations
 
 import argparse
+import string
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
 
 
-RANK_COL_START_IDX = 11  # Excel column L (0-based)
-RANK_COL_END_IDX = 18  # Excel column S (0-based, inclusive)
-LABEL_ROW_IDX = 1  # Excel row 2 (0-based)
 DATA_START_ROW_IDX = 3  # Excel row 4 (0-based)
+
+COURSE_COLUMN_MAP = {
+    "L": "ACC 6060 Professionalism and Leadership",
+    "M": "ACC 6300 Data Analytics",
+    "N": "ACC 6400 Advanced Tax Business Entities",
+    "O": "ACC 6510 Financial Audit",
+    "P": "ACC 6540 Professional Ethics",
+    "Q": "ACC 6560 Financial Theory & Research I",
+    "R": "ACC 6350 Management Control Systems",
+    "S": "ACC 6600 Business Law for Accountants",
+}
 
 
 REFLECTION_TEMPLATE = """- What changed from Project 1 to this workflow?
@@ -32,28 +41,29 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def excel_col_to_index(col_letters: str) -> int:
+    col_letters = col_letters.strip().upper()
+    if not col_letters or any(ch not in string.ascii_uppercase for ch in col_letters):
+        raise ValueError(f"Invalid Excel column letters: {col_letters!r}")
+
+    idx = 0
+    for ch in col_letters:
+        idx = idx * 26 + (ord(ch) - ord("A") + 1)
+    return idx - 1
+
+
 def load_rank_data(input_path: Path) -> pd.DataFrame:
     if not input_path.exists():
         raise FileNotFoundError(f"Input file does not exist: {input_path}")
 
     df = pd.read_excel(input_path, engine="openpyxl", header=None)
 
-    rank_cols = slice(RANK_COL_START_IDX, RANK_COL_END_IDX + 1)
-
-    # Labels are in Excel row 2 (index 1) for rank-order columns L:S.
-    raw_labels = df.iloc[LABEL_ROW_IDX, rank_cols]
-
-    course_names = []
-    for label in raw_labels:
-        label_text = str(label).strip()
-        if " - " in label_text:
-            course_name = label_text.split(" - ")[-1].strip()
-        else:
-            course_name = label_text
-        course_names.append(course_name)
+    rank_col_letters = list(COURSE_COLUMN_MAP.keys())
+    rank_col_indices = [excel_col_to_index(letter) for letter in rank_col_letters]
+    course_names = [COURSE_COLUMN_MAP[letter] for letter in rank_col_letters]
 
     # Student responses start on Excel row 4 (index 3).
-    rank_df = df.iloc[DATA_START_ROW_IDX:, rank_cols].copy()
+    rank_df = df.iloc[DATA_START_ROW_IDX:, rank_col_indices].copy()
     rank_df.columns = course_names
 
     # Convert all values to numeric ranks (coerce invalid to NaN).
