@@ -1,4 +1,0 @@
-- What changed from Project 1 to this workflow?
-- Where is the control now?
-- What would you do next if you had one more week?
-- Identify one accounting application of this workflow from another class you have taken or are taking. Be specific.
