@@ -1,0 +1,30 @@
+name: Rank Order Analysis
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  run-analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run rank-order analysis
+        run: python src/rank_order.py --input "data/Grad Program Exit Survey Data 2024.xlsx" --outdir "outputs"
+
+      - name: Upload outputs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: outputs
+          path: outputs/
